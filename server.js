@@ -25,7 +25,7 @@ const sessionMiddleware = session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'none',
     maxAge: 24 * 60 * 60 * 1000
   }
@@ -39,7 +39,7 @@ const io = new Server(server, {
     credentials: true
   },
   cookie: {
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'none'
   }
 });
@@ -83,6 +83,7 @@ const MALAYALAM_WORDS = [
 
 const rooms = {};
 const onlinePlayers = new Map();
+const tokenMap = new Map();
 
 function generateRoomCode() {
   return crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -237,20 +238,30 @@ app.get('/auth/discord/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
     });
 
-    req.session.user = {
+    const userData = encodeURIComponent(JSON.stringify({
       id: userRes.data.id,
       username: userRes.data.username,
-      avatar: userRes.data.avatar,
-      discriminator: userRes.data.discriminator
-    };
-
-    req.session.save(() => {
-      res.redirect(`${FRONTEND_URL}/lobby.html`);
-    });
+      avatar: userRes.data.avatar
+    }));
+    res.redirect(`${FRONTEND_URL}/lobby.html?user=${userData}`);
   } catch (err) {
     console.error('Discord auth error:', err.message);
     res.redirect(FRONTEND_URL);
   }
+});
+
+app.post('/api/setuser', (req, res) => {
+  const { user } = req.body;
+  if (!user || !user.id) {
+    return res.status(400).json({ error: 'Invalid user data' });
+  }
+  const token = crypto.randomBytes(32).toString('hex');
+  tokenMap.set(token, {
+    id: user.id,
+    username: user.username,
+    avatar: user.avatar
+  });
+  res.json({ token });
 });
 
 app.get('/auth/logout', (req, res) => {
@@ -260,11 +271,14 @@ app.get('/auth/logout', (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-  if (req.session.user) {
-    res.json(req.session.user);
-  } else {
-    res.status(401).json({ error: 'Not logged in' });
+  if (req.session && req.session.user) {
+    return res.json(req.session.user);
   }
+  const token = req.query.token || (req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+  if (token && tokenMap.has(token)) {
+    return res.json(tokenMap.get(token));
+  }
+  res.status(401).json({ error: 'Not logged in' });
 });
 
 app.get('/api/stats', (req, res) => {
@@ -276,6 +290,12 @@ io.on('connection', (socket) => {
   let user = null;
   if (session && session.user) {
     user = session.user;
+  }
+  if (!user && socket.handshake.auth && socket.handshake.auth.token) {
+    const tokenUser = tokenMap.get(socket.handshake.auth.token);
+    if (tokenUser) {
+      user = tokenUser;
+    }
   }
 
   onlinePlayers.set(socket.id, { socketId: socket.id, user });
