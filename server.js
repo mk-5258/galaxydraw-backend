@@ -119,7 +119,8 @@ function startRound(room) {
     drawer: room.players[drawerIndex].user,
     drawerSocketId: room.currentDrawer,
     wordLength: room.currentWord.length,
-    language: room.language
+    language: room.language,
+    drawTime: room.drawTime
   });
 
   io.to(room.currentDrawer).emit('choose-word', {
@@ -301,10 +302,21 @@ io.on('connection', (socket) => {
   onlinePlayers.set(socket.id, { socketId: socket.id, user });
   io.emit('online-count', onlinePlayers.size);
 
+  socket.on('get-rooms', () => {
+    const list = {};
+    for (const [code, room] of Object.entries(rooms)) {
+      if (room.status === 'lobby') {
+        list[code] = { code, name: room.name, players: room.players.map(p => ({ socketId: p.socketId, user: p.user })), maxPlayers: room.maxPlayers, status: room.status };
+      }
+    }
+    socket.emit('room-list-update', list);
+  });
+
   socket.on('create-room', (data, callback) => {
     const code = generateRoomCode();
     rooms[code] = {
       code,
+      name: data.name || 'Room',
       host: socket.id,
       players: [{ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } }],
       status: 'lobby',
@@ -312,6 +324,7 @@ io.on('connection', (socket) => {
       currentDrawerIndex: 0,
       currentWord: null,
       round: 1,
+      maxPlayers: data.maxPlayers || 8,
       maxRounds: data.rounds || 5,
       drawTime: data.drawTime || 60,
       language: data.language || 'en',
@@ -331,9 +344,13 @@ io.on('connection', (socket) => {
 
   socket.on('join-room', (data, callback) => {
     const code = data.code.toUpperCase();
-    const room = rooms[code];
+    let room = rooms[code];
     if (!room) return callback({ error: 'Room not found' });
-    if (room.players.length >= 12) return callback({ error: 'Room full' });
+    if (room.pendingDelete) {
+      clearTimeout(room.pendingDelete);
+      delete room.pendingDelete;
+    }
+    if (room.players.length >= (room.maxPlayers || 12)) return callback({ error: 'Room full' });
     if (room.status !== 'lobby') return callback({ error: 'Game already started' });
 
     room.players.push({ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } });
@@ -467,7 +484,9 @@ io.on('connection', (socket) => {
     if (room.players.length === 0) {
       clearInterval(room.timerInterval);
       clearTimeout(room.wordChoiceTimeout);
-      delete rooms[roomCode];
+      room.pendingDelete = setTimeout(() => {
+        delete rooms[roomCode];
+      }, 10000);
       return;
     }
 
