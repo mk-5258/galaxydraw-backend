@@ -294,7 +294,7 @@ function endGame(room) {
       }
       const data = xpStore.get(p.user.id);
       data.gamesPlayed++;
-      if (p.socketId === winner?.user?.id || p.user.id === winner?.user?.id) {
+      if (p.user.id === winner?.user?.id) {
         data.wins++;
       }
       const score = room.scores[p.socketId] || 0;
@@ -469,18 +469,60 @@ io.on('connection', (socket) => {
     if (room.players.length >= (room.maxPlayers || 12)) return callback({ error: 'Room full' });
     if (room.status !== 'lobby') return callback({ error: 'Game already started' });
 
-    room.players.push({ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } });
-    room.scores[socket.id] = 0;
+    let isRejoin = false;
+    const existingIdx = room.players.findIndex(p => p.user?.id === user?.id);
+    if (existingIdx !== -1) {
+      const oldId = room.players[existingIdx].socketId;
+      if (oldId !== socket.id && room.scores[oldId] !== undefined) {
+        room.scores[socket.id] = room.scores[oldId];
+        delete room.scores[oldId];
+      }
+      room.players[existingIdx].socketId = socket.id;
+      if (room.host === oldId) room.host = socket.id;
+      isRejoin = true;
+    } else {
+      room.players.push({ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } });
+      room.scores[socket.id] = 0;
+    }
     socket.join(code);
     socket.roomCode = code;
 
-    io.to(code).emit('player-joined', { players: room.players });
-    io.to(code).emit('chat-message', {
-      type: 'system',
-      text: `👋 ${user?.username || 'Player'} joined`
-    });
+    if (isRejoin) {
+      io.to(code).emit('player-joined', { players: room.players });
+    } else {
+      io.to(code).emit('player-joined', { players: room.players });
+      io.to(code).emit('chat-message', {
+        type: 'system',
+        text: `👋 ${user?.username || 'Player'} joined`
+      });
+    }
     io.emit('public-rooms', getPublicRoomsList());
 
+    callback({ success: true, code, room: { code: room.code, host: room.host, players: room.players, status: room.status, maxRounds: room.maxRounds, drawTime: room.drawTime, language: room.language, round: room.round } });
+  });
+
+  socket.on('rejoin-room', (data, callback) => {
+    const code = data.code.toUpperCase();
+    const room = rooms[code];
+    if (!room) return callback({ error: 'Room not found' });
+    const existingPlayer = room.players.find(p => p.user?.id === user?.id);
+    if (existingPlayer) {
+      const oldId = existingPlayer.socketId;
+      if (oldId !== socket.id && room.scores[oldId] !== undefined) {
+        room.scores[socket.id] = room.scores[oldId];
+        delete room.scores[oldId];
+      }
+      existingPlayer.socketId = socket.id;
+      if (room.host === oldId) room.host = socket.id;
+      if (room.currentDrawer === oldId) room.currentDrawer = socket.id;
+    } else {
+      if (room.players.length >= (room.maxPlayers || 12)) return callback({ error: 'Room full' });
+      room.players.push({ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } });
+      room.scores[socket.id] = 0;
+    }
+    socket.join(code);
+    socket.roomCode = code;
+    io.to(code).emit('player-joined', { players: room.players });
     callback({ success: true, code, room: { code: room.code, host: room.host, players: room.players, status: room.status, maxRounds: room.maxRounds, drawTime: room.drawTime, language: room.language, round: room.round } });
   });
 
@@ -596,7 +638,7 @@ io.on('connection', (socket) => {
     clearInterval(room.timerInterval);
     clearTimeout(room.wordChoiceTimeout);
     clearTimeout(room.roundFailsafeTimeout);
-    io.to(room.code).emit('game-restarted', { players: room.players });
+    io.to(room.code).emit('game-restarted', { players: room.players, host: room.host });
     io.emit('public-rooms', getPublicRoomsList());
   });
 
