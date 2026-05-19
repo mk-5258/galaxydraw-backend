@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'galaxydraw_secret_123';
 
 app.use(cors({
-  origin: [FRONTEND_URL, 'http://localhost:5500'],
+  origin: ['https://galaxydrawmk.great-site.net', 'http://localhost:5500'],
   credentials: true
 }));
 app.use(express.json());
@@ -25,7 +25,7 @@ const sessionMiddleware = session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none',
     maxAge: 24 * 60 * 60 * 1000
   }
@@ -35,11 +35,11 @@ app.use(sessionMiddleware);
 
 const io = new Server(server, {
   cors: {
-    origin: [FRONTEND_URL, 'http://localhost:5500'],
+    origin: ['https://galaxydrawmk.great-site.net', 'http://localhost:5500'],
     credentials: true
   },
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none'
   }
 });
@@ -84,6 +84,46 @@ const MALAYALAM_WORDS = [
 const rooms = {};
 const onlinePlayers = new Map();
 const tokenMap = new Map();
+const xpStore = new Map();
+const LEVEL_THRESHOLDS = [0, 200, 500, 1000, 2000, 3500, 5500, 8000, 11000, 15000];
+
+function getLevel(xp) {
+  let level = 1;
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1;
+  }
+  return Math.min(level, 10);
+}
+
+function addXP(discordId, amount) {
+  if (!discordId) return { xp: 0, level: 1, levelUp: false };
+  if (!xpStore.has(discordId)) {
+    xpStore.set(discordId, { xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, achievements: [] });
+  }
+  const data = xpStore.get(discordId);
+  const oldLevel = data.level;
+  data.xp += amount;
+  data.level = getLevel(data.xp);
+  const levelUp = data.level > oldLevel;
+  return { xp: data.xp, level: data.level, levelUp };
+}
+
+function getPublicRoomsList() {
+  const list = [];
+  for (const [code, room] of Object.entries(rooms)) {
+    if (room.visibility === 'public' && (room.status === 'lobby' || room.status === 'playing')) {
+      list.push({
+        code,
+        name: room.name,
+        players: room.players.map(p => ({ socketId: p.socketId, user: p.user })),
+        maxPlayers: room.maxPlayers,
+        status: room.status,
+        visibility: room.visibility
+      });
+    }
+  }
+  return list;
+}
 
 function generateRoomCode() {
   return crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -187,6 +227,13 @@ function endRound(room, allGuessed) {
   clearTimeout(room.wordChoiceTimeout);
   room.status = 'round-end';
 
+  if (allGuessed && room.currentDrawer) {
+    const drawerPlayer = room.players.find(p => p.socketId === room.currentDrawer);
+    if (drawerPlayer && drawerPlayer.user) {
+      addXP(drawerPlayer.user.id, 40);
+    }
+  }
+
   io.to(room.code).emit('round-end', {
     word: room.currentWord,
     scores: room.scores,
@@ -206,6 +253,26 @@ function endGame(room) {
     user: p.user,
     score: room.scores[p.socketId] || 0
   })).sort((a, b) => b.score - a.score);
+
+  const winner = sorted[0];
+  if (winner && winner.user) {
+    addXP(winner.user.id, 100);
+  }
+
+  room.players.forEach(p => {
+    if (p.user) {
+      if (!xpStore.has(p.user.id)) {
+        xpStore.set(p.user.id, { xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, achievements: [] });
+      }
+      const data = xpStore.get(p.user.id);
+      data.gamesPlayed++;
+      if (p.socketId === winner?.user?.id || p.user.id === winner?.user?.id) {
+        data.wins++;
+      }
+      const score = room.scores[p.socketId] || 0;
+      if (score > data.bestScore) data.bestScore = score;
+    }
+  });
 
   io.to(room.code).emit('game-end', { scores: sorted });
 }
@@ -239,12 +306,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
     });
 
-    const userData = encodeURIComponent(JSON.stringify({
-      id: userRes.data.id,
-      username: userRes.data.username,
-      avatar: userRes.data.avatar
-    }));
-    res.redirect(`${FRONTEND_URL}/lobby.html?user=${userData}`);
+    res.redirect(`${FRONTEND_URL}/lobby.html?user=${encodeURIComponent(JSON.stringify({id: userRes.data.id, username: userRes.data.username, avatar: userRes.data.avatar}))}`);
   } catch (err) {
     console.error('Discord auth error:', err.message);
     res.redirect(FRONTEND_URL);
@@ -286,6 +348,28 @@ app.get('/api/stats', (req, res) => {
   res.json({ onlinePlayers: onlinePlayers.size });
 });
 
+app.get('/api/profile/:discordId', (req, res) => {
+  const { discordId } = req.params;
+  if (xpStore.has(discordId)) {
+    res.json(xpStore.get(discordId));
+  } else {
+    res.json({ xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, achievements: [] });
+  }
+});
+
+app.get('/api/leaderboard', (req, res) => {
+  const entries = [];
+  for (const [id, data] of xpStore.entries()) {
+    entries.push({ discordId: id, ...data });
+  }
+  entries.sort((a, b) => b.xp - a.xp);
+  res.json(entries.slice(0, 10));
+});
+
+app.get('/api/public-rooms', (req, res) => {
+  res.json(getPublicRoomsList());
+});
+
 io.on('connection', (socket) => {
   const session = socket.request.session;
   let user = null;
@@ -301,6 +385,8 @@ io.on('connection', (socket) => {
 
   onlinePlayers.set(socket.id, { socketId: socket.id, user });
   io.emit('online-count', onlinePlayers.size);
+  io.emit('online-players', Array.from(onlinePlayers.values()));
+  socket.emit('public-rooms', getPublicRoomsList());
 
   socket.on('get-rooms', () => {
     const list = {};
@@ -328,6 +414,7 @@ io.on('connection', (socket) => {
       maxRounds: data.rounds || 5,
       drawTime: data.drawTime || 60,
       language: data.language || 'en',
+      visibility: data.visibility || 'public',
       scores: {},
       usedWords: [],
       guessedCorrectly: new Set(),
@@ -339,6 +426,7 @@ io.on('connection', (socket) => {
     rooms[code].scores[socket.id] = 0;
     socket.join(code);
     socket.roomCode = code;
+    io.emit('public-rooms', getPublicRoomsList());
     callback({ success: true, code });
   });
 
@@ -363,6 +451,7 @@ io.on('connection', (socket) => {
       type: 'system',
       text: `👋 ${user?.username || 'Player'} joined`
     });
+    io.emit('public-rooms', getPublicRoomsList());
 
     callback({ success: true, code, room: { code: room.code, host: room.host, players: room.players, status: room.status, maxRounds: room.maxRounds, drawTime: room.drawTime, language: room.language, round: room.round } });
   });
@@ -374,6 +463,7 @@ io.on('connection', (socket) => {
     room.currentDrawerIndex = 0;
     room.round = 1;
     io.to(room.code).emit('game-starting', { players: room.players });
+    io.emit('public-rooms', getPublicRoomsList());
     setTimeout(() => startRound(room), 2000);
   });
 
@@ -403,6 +493,12 @@ io.on('connection', (socket) => {
       let points = Math.max(50, 200 - Math.floor(elapsed * 2));
       if (room.guessedCorrectly.size === 1) points += 50;
       room.scores[socket.id] = (room.scores[socket.id] || 0) + points;
+
+      const speedBonus = Math.max(0, Math.min(30, 30 - Math.floor(elapsed / 2)));
+      addXP(user?.id, 50 + speedBonus);
+      if (room.guessedCorrectly.size === 1) {
+        addXP(user?.id, 30);
+      }
 
       room.players.forEach(p => {
         if (p.socketId === room.currentDrawer) {
@@ -451,6 +547,12 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('canvas-cleared');
   });
 
+  socket.on('reaction', (data) => {
+    const room = getRoom(socket);
+    if (!room) return;
+    io.to(room.code).emit('reaction', data);
+  });
+
   socket.on('restart-game', () => {
     const room = getRoom(socket);
     if (!room || room.host !== socket.id) return;
@@ -466,11 +568,13 @@ io.on('connection', (socket) => {
     clearInterval(room.timerInterval);
     clearTimeout(room.wordChoiceTimeout);
     io.to(room.code).emit('game-restarted', { players: room.players });
+    io.emit('public-rooms', getPublicRoomsList());
   });
 
   socket.on('disconnect', () => {
     onlinePlayers.delete(socket.id);
     io.emit('online-count', onlinePlayers.size);
+    io.emit('online-players', Array.from(onlinePlayers.values()));
 
     const roomCode = socket.roomCode;
     if (!roomCode) return;
@@ -486,6 +590,7 @@ io.on('connection', (socket) => {
       clearTimeout(room.wordChoiceTimeout);
       room.pendingDelete = setTimeout(() => {
         delete rooms[roomCode];
+        io.emit('public-rooms', getPublicRoomsList());
       }, 10000);
       return;
     }
@@ -495,6 +600,7 @@ io.on('connection', (socket) => {
         room.host = room.players[0].socketId;
       }
       io.to(roomCode).emit('player-left', { players: room.players, newHost: room.host });
+      io.emit('public-rooms', getPublicRoomsList());
       return;
     }
 
@@ -513,6 +619,7 @@ io.on('connection', (socket) => {
     }
 
     io.to(roomCode).emit('player-left', { players: room.players, newHost: room.host });
+    io.emit('public-rooms', getPublicRoomsList());
   });
 });
 
