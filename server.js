@@ -153,19 +153,37 @@ function startRound(room) {
   room.wordHint = room.currentWord.replace(/./g, '_').split('');
   room.roundStartTime = Date.now();
 
-  io.to(room.code).emit('round-start', {
-    round: room.round,
-    maxRounds: room.maxRounds,
-    drawer: room.players[drawerIndex].user,
-    drawerSocketId: room.currentDrawer,
-    wordLength: room.currentWord.length,
-    language: room.language,
-    drawTime: room.drawTime
-  });
+  clearTimeout(room.wordChoiceTimeout);
+  clearTimeout(room.roundFailsafeTimeout);
 
-  io.to(room.currentDrawer).emit('choose-word', {
-    words: generateWordChoices(room),
-    timeout: 10
+  room.players.forEach(p => {
+    if (p.socketId === room.currentDrawer) {
+      io.to(p.socketId).emit('round-start', {
+        round: room.round,
+        maxRounds: room.maxRounds,
+        drawer: room.players[drawerIndex].user,
+        drawerSocketId: room.currentDrawer,
+        wordLength: room.currentWord.length,
+        language: room.language,
+        drawTime: room.drawTime,
+        isDrawer: true
+      });
+      io.to(p.socketId).emit('choose-word', {
+        words: generateWordChoices(room),
+        timeout: 10
+      });
+    } else {
+      io.to(p.socketId).emit('round-start', {
+        round: room.round,
+        maxRounds: room.maxRounds,
+        drawer: room.players[drawerIndex].user,
+        drawerSocketId: room.currentDrawer,
+        wordLength: room.currentWord.length,
+        language: room.language,
+        drawTime: room.drawTime,
+        isDrawer: false
+      });
+    }
   });
 
   room.wordChoiceTimeout = setTimeout(() => {
@@ -173,6 +191,14 @@ function startRound(room) {
       selectWordAndStart(room, room.currentWord);
     }
   }, 10000);
+
+  room.roundFailsafeTimeout = setTimeout(() => {
+    if (room && (room.status === 'choosing' || room.status === 'drawing')) {
+      if (room.status === 'choosing') {
+        selectWordAndStart(room, room.currentWord);
+      }
+    }
+  }, 12000);
 }
 
 function generateWordChoices(room) {
@@ -188,6 +214,7 @@ function generateWordChoices(room) {
 function selectWordAndStart(room, word) {
   if (room.status !== 'choosing') return;
   clearTimeout(room.wordChoiceTimeout);
+  clearTimeout(room.roundFailsafeTimeout);
   room.currentWord = word;
   room.status = 'drawing';
   room.wordHint = word.replace(/./g, '_').split('');
@@ -225,6 +252,7 @@ function selectWordAndStart(room, word) {
 function endRound(room, allGuessed) {
   clearInterval(room.timerInterval);
   clearTimeout(room.wordChoiceTimeout);
+  clearTimeout(room.roundFailsafeTimeout);
   room.status = 'round-end';
 
   if (allGuessed && room.currentDrawer) {
@@ -567,6 +595,7 @@ io.on('connection', (socket) => {
     room.players.forEach(p => { room.scores[p.socketId] = 0; });
     clearInterval(room.timerInterval);
     clearTimeout(room.wordChoiceTimeout);
+    clearTimeout(room.roundFailsafeTimeout);
     io.to(room.code).emit('game-restarted', { players: room.players });
     io.emit('public-rooms', getPublicRoomsList());
   });
@@ -588,6 +617,7 @@ io.on('connection', (socket) => {
     if (room.players.length === 0) {
       clearInterval(room.timerInterval);
       clearTimeout(room.wordChoiceTimeout);
+      clearTimeout(room.roundFailsafeTimeout);
       room.pendingDelete = setTimeout(() => {
         delete rooms[roomCode];
         io.emit('public-rooms', getPublicRoomsList());
@@ -607,6 +637,7 @@ io.on('connection', (socket) => {
     if (socket.id === room.currentDrawer) {
       clearInterval(room.timerInterval);
       clearTimeout(room.wordChoiceTimeout);
+      clearTimeout(room.roundFailsafeTimeout);
       io.to(roomCode).emit('chat-message', {
         type: 'system',
         text: '⏭ Round skipped - drawer disconnected'
