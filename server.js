@@ -376,6 +376,16 @@ app.get('/api/stats', (req, res) => {
   res.json({ onlinePlayers: onlinePlayers.size });
 });
 
+app.get('/api/userinfo/:discordId', (req, res) => {
+  const { discordId } = req.params;
+  for (const [socketId, player] of onlinePlayers.entries()) {
+    if (player.user && player.user.id === discordId) {
+      return res.json({ id: player.user.id, username: player.user.username, avatar: player.user.avatar });
+    }
+  }
+  res.json({ id: discordId, username: 'Player', avatar: null });
+});
+
 app.get('/api/profile/:discordId', (req, res) => {
   const { discordId } = req.params;
   if (xpStore.has(discordId)) {
