@@ -416,6 +416,17 @@ io.on('connection', (socket) => {
   io.emit('online-players', Array.from(onlinePlayers.values()));
   socket.emit('public-rooms', getPublicRoomsList());
 
+  socket.on('player-online', (userData) => {
+    if (userData && userData.id) {
+      onlinePlayers.set(socket.id, { socketId: socket.id, user: userData });
+      io.emit('online-players', Array.from(onlinePlayers.values()));
+    }
+  });
+
+  socket.on('get-online-players', () => {
+    socket.emit('online-players', Array.from(onlinePlayers.values()));
+  });
+
   socket.on('get-rooms', () => {
     const list = {};
     for (const [code, room] of Object.entries(rooms)) {
