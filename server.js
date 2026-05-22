@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'galaxydraw_secret_123';
 
 app.use(cors({
-  origin: ['https://galaxydrawmk.great-site.net', 'http://localhost:5500'],
+  origin: [FRONTEND_URL, 'https://galaxydrawmk.great-site.net', 'http://localhost:5500'],
   credentials: true
 }));
 app.use(express.json());
@@ -35,7 +35,7 @@ app.use(sessionMiddleware);
 
 const io = new Server(server, {
   cors: {
-    origin: ['https://galaxydrawmk.great-site.net', 'http://localhost:5500'],
+    origin: [FRONTEND_URL, 'https://galaxydrawmk.great-site.net', 'http://localhost:5500'],
     credentials: true
   },
   cookie: {
@@ -47,59 +47,72 @@ const io = new Server(server, {
 io.engine.use(sessionMiddleware);
 
 const ENGLISH_WORDS = [
-  // Animals
   'cat','dog','elephant','giraffe','dolphin','penguin','butterfly','turtle',
   'rabbit','horse','lion','tiger','bear','wolf','fox','deer','owl','eagle',
   'shark','whale','monkey','gorilla','zebra','kangaroo','crocodile','parrot',
   'flamingo','octopus','jellyfish','seahorse','hamster','panda','koala',
-  // Food & Drink
   'pizza','hamburger','hotdog','sandwich','sushi','taco','pasta','bread',
   'cake','cookie','icecream','chocolate','popcorn','coffee','tea','juice',
   'apple','banana','orange','grape','watermelon','strawberry','pineapple',
   'mango','cherry','lemon','peach','mushroom','coconut','avocado','broccoli',
-  // Objects
   'pencil','book','clock','key','camera','umbrella','backpack','wallet',
   'sunglasses','watch','ring','crown','sword','shield','candle','mirror',
   'cushion','carpet','pillow','blanket','soap','towel','compass','torch',
   'ladder','chair','table','window','door','bridge','anchor','telescope',
-  // Nature
   'mountain','river','ocean','island','rainbow','star','moon','sun','cloud',
   'rain','snow','thunder','lightning','volcano','waterfall','cave','desert',
   'forest','flower','tree','rose','sunflower','cactus','bamboo',
-  // Transportation
   'airplane','rocket','bicycle','car','bus','train','boat','helicopter',
   'motorcycle','submarine','skateboard','scooter','truck','ambulance',
-  // Sports & Activities
   'football','basketball','tennis','baseball','swimming','running','jumping',
   'skiing','surfing','boxing','archery','gymnastics','cycling','fishing',
-  // Music & Arts
   'piano','guitar','violin','drums','microphone','headphones','painting',
   'sculpture','ballet','theater','cinema',
-  // Buildings & Places
   'castle','lighthouse','hospital','school','church','mosque','temple',
   'pyramid','igloo','treehouse','windmill','skyscraper',
-  // Space
   'planet','comet','meteor','satellite','astronaut','spaceship','nebula',
-  'galaxy','constellation','eclipse','blackhole','asteroid','rocket',
-  // Fantasy & Fun
+  'galaxy','constellation','eclipse','blackhole','asteroid',
   'dragon','unicorn','mermaid','wizard','robot','ghost','pumpkin','pirate',
   'ninja','viking','alien','superhero','fairy','vampire','werewolf',
-  // Everyday
-  'birthday','balloon','fireworks','rainbow','treasure','puzzle','maze',
-  'kite','parachute','lollipop','magnet','hourglass','compass']
+  'birthday','balloon','fireworks','treasure','puzzle','maze',
+  'kite','parachute','lollipop','magnet','hourglass','compass',
+  'feather','nest','spider','bee','ant','ladybug','snail','worm',
+  'cheese','egg','milk','bread','butter','jam','honey','rice','noodles',
+  'bottle','cup','plate','bowl','fork','spoon','knife','pot','pan',
+  'bed','desk','drawer','shelf','cabinet','curtain','rug','lamp',
+  'road','path','gate','wall','roof','chimney','fence','garden',
+  'sunrise','sunset','storm','fog','ice','flood','drought','breeze',
+  'basket','bucket','rope','nail','hammer','drill','lock','flag',
+  'diamond','ruby','gold','silver','bronze','pearl','crystal','coin',
+  'sailor','knight','king','queen','prince','princess','giant','elf',
+  'scarf','helmet','boot','shoe','glove','coin','button','zipper',
+  'tent','cabin','cottage','barn','garage','stadium','museum','tower',
+  'lunch','dinner','breakfast','snack','feast','grill','stove','oven'
+];
 
 const MALAYALAM_WORDS = [
-  'വീട്', 'മരം', 'പൂച്ച', 'നായ', 'മീൻ', 'ആന', 'കാർ', 'പൂക്കൾ',
-  'മഴ', 'കടൽ', 'ചന്ദ്രൻ', 'സൂര്യൻ', 'പക്ഷി', 'പഴം', 'പുസ്തകം',
-  'വെള്ളം', 'അഗ്നി', 'ഭൂമി', 'ആകാശം', 'നക്ഷത്രം', 'കളിപ്പാട്ടം',
-  'പാലം', 'പറമ്പ്', 'കുന്ന്', 'പുഴ', 'കായൽ', 'വയൽ', 'കിണർ',
-  'പള്ളി', 'അമ്പലം', 'വിദ്യാലയം', 'ആശുപത്രി', 'ചന്ത', 'പാട്ട്',
-  'നൃത്തം', 'ചിത്രം', 'കഥ', 'സിനിമ', 'മിഠായി', 'അപ്പം', 'പായസം',
-  'കറി', 'ചോറ്', 'ഇഡ്ഡലി', 'ദോശ', 'കമ്പ്യൂട്ടർ', 'ഫോൺ', 'ടെലിവിഷൻ',
-  'പാമ്പ്', 'തവള', 'കുരങ്ങൻ', 'പശു', 'കുതിര', 'ആട്', 'കോഴി',
-  'മഞ്ഞ്', 'കാറ്റ്', 'തീ', 'കടൽത്തീരം', 'മേഘം', 'വെള്ളച്ചാട്ടം',
-  'പൂട്ട്', 'വീൽ', 'കത്തി', 'ചൂല്', 'കിടക്ക', 'കണ്ണാടി', 'മേശ',
-  'കസേര', 'വാതിൽ', 'ജനൽ', 'കൊടി', 'ചക്രം', 'കൊട്ട', 'വള']
+  'വീട്','മരം','പൂച്ച','നായ','മീൻ','ആന','കാർ','പൂക്കൾ',
+  'മഴ','കടൽ','ചന്ദ്രൻ','സൂര്യൻ','പക്ഷി','പഴം','പുസ്തകം',
+  'വെള്ളം','അഗ്നി','ഭൂമി','ആകാശം','നക്ഷത്രം','കളിപ്പാട്ടം',
+  'പാലം','പറമ്പ്','കുന്ന്','പുഴ','കായൽ','വയൽ','കിണർ',
+  'പള്ളി','അമ്പലം','വിദ്യാലയം','ആശുപത്രി','ചന്ത','പാട്ട്',
+  'നൃത്തം','ചിത്രം','കഥ','സിനിമ','മിഠായി','അപ്പം','പായസം',
+  'കറി','ചോറ്','ഇഡ്ഡലി','ദോശ','കമ്പ്യൂട്ടർ','ഫോൺ','ടെലിവിഷൻ',
+  'പാമ്പ്','തവള','കുരങ്ങൻ','പശു','കുതിര','ആട്','കോഴി',
+  'മഞ്ഞ്','കാറ്റ്','തീ','കടൽത്തീരം','മേഘം','വെള്ളച്ചാട്ടം',
+  'പൂട്ട്','വീൽ','കത്തി','ചൂല്','കിടക്ക','കണ്ണാടി','മേശ',
+  'കസേര','വാതിൽ','ജനൽ','കൊടി','ചക്രം','കൊട്ട','വള',
+  'മാമ്പഴം','തേങ്ങ','പപ്പായ','ഇത്തിക്കണ്ണി','വഴുതന','പാവയ്ക്ക',
+  'പുളി','ഇഞ്ചി','മഞ്ഞൾ','മുളക്','ഉപ്പ്','പഞ്ചസാര',
+  'പൂവൻ','കുളം','പറക്കും','കൊതുക്','ഈച്ച','ചിലന്തി','പുഴു',
+  'താറാവ്','പ്രാവ്','കാക്ക','കിളി','മയിൽ','കോകില','കുയിൽ',
+  'ആമ','ഞണ്ട്','ചെമ്മീൻ','കണവ','നത്ത','ഒട്ടകം','സിംഹം',
+  'ഉപ്പുമാവ്','പുട്ട്','കഞ്ഞി','ബിരിയാണി','സാമ്പാർ','അവിയൽ',
+  'ഓട്ട','പന്ത്','പട്ടം','വണ്ടി','തോണി','ശാസ്ത്രം','ഗണിതം',
+  'തക്കാളി','കാരറ്റ്','ബീൻസ്','കാബേജ്','പയർ','മുള്ളങ്കി',
+  'വസന്തം','വർഷം','ശിശിരം','മാരി','ഇടി','മിന്നൽ','കൊടുങ്കാറ്റ്',
+  'തേൻ','പാല്','തൈര്','വെണ്ണ','നെയ്യ്','മോര്'
+];
 
 const rooms = {};
 const onlinePlayers = new Map();
@@ -118,7 +131,7 @@ function getLevel(xp) {
 function addXP(discordId, amount) {
   if (!discordId) return { xp: 0, level: 1, levelUp: false };
   if (!xpStore.has(discordId)) {
-    xpStore.set(discordId, { xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, achievements: [] });
+    xpStore.set(discordId, { xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, timesDrawn: 0, achievements: [] });
   }
   const data = xpStore.get(discordId);
   const oldLevel = data.level;
@@ -137,6 +150,7 @@ function getPublicRoomsList() {
         name: room.name,
         players: room.players.map(p => ({ socketId: p.socketId, user: p.user })),
         maxPlayers: room.maxPlayers,
+        playerCount: room.players.length,
         status: room.status,
         visibility: room.visibility
       });
@@ -152,10 +166,21 @@ function generateRoomCode() {
 function getWord(room) {
   const list = room.language === 'ml' ? MALAYALAM_WORDS : ENGLISH_WORDS;
   let word;
+  let attempts = 0;
   do {
     word = list[Math.floor(Math.random() * list.length)];
-  } while (room.usedWords && room.usedWords.includes(word));
+    attempts++;
+  } while (room.usedWords && room.usedWords.includes(word) && attempts < 50);
   return word;
+}
+
+function getPlayerState(room) {
+  return room.players.map(p => ({
+    socketId: p.socketId,
+    user: p.user || { id: p.socketId, username: 'Player', avatar: null },
+    score: room.scores[p.socketId] || 0,
+    isDrawer: p.socketId === room.currentDrawer
+  }));
 }
 
 function startRound(room) {
@@ -172,6 +197,7 @@ function startRound(room) {
   room.guessedCorrectly = new Set();
   room.wordHint = room.currentWord.replace(/./g, '_').split('');
   room.roundStartTime = Date.now();
+  room.drawerIdleTimeouts = 0;
 
   clearTimeout(room.wordChoiceTimeout);
   clearTimeout(room.roundFailsafeTimeout);
@@ -310,7 +336,7 @@ function endGame(room) {
   room.players.forEach(p => {
     if (p.user) {
       if (!xpStore.has(p.user.id)) {
-        xpStore.set(p.user.id, { xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, achievements: [] });
+        xpStore.set(p.user.id, { xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, timesDrawn: 0, achievements: [] });
       }
       const data = xpStore.get(p.user.id);
       data.gamesPlayed++;
@@ -325,7 +351,38 @@ function endGame(room) {
   io.to(room.code).emit('game-end', { scores: sorted });
 }
 
-const app2 = app;
+function startAutoCountdown(room) {
+  if (room.autoStartInterval) return;
+  let count = 5;
+  room.autoStartInterval = setInterval(() => {
+    io.to(room.code).emit('auto-start-countdown', { count });
+    count--;
+    if (count < 0) {
+      clearInterval(room.autoStartInterval);
+      room.autoStartInterval = null;
+      if (room && room.status === 'lobby' && room.players.length >= 2) {
+        room.status = 'playing';
+        room.currentDrawerIndex = 0;
+        room.round = 1;
+        io.to(room.code).emit('game-starting', { players: room.players });
+        io.emit('public-rooms', getPublicRoomsList());
+        setTimeout(() => startRound(room), 2000);
+      }
+    }
+  }, 1000);
+}
+
+function cancelAutoCountdown(room) {
+  if (room.autoStartInterval) {
+    clearInterval(room.autoStartInterval);
+    room.autoStartInterval = null;
+    io.to(room.code).emit('auto-start-cancelled');
+  }
+}
+
+function getRoom(socket) {
+  return rooms[socket.roomCode];
+}
 
 app.get('/auth/discord', (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
@@ -354,7 +411,8 @@ app.get('/auth/discord/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
     });
 
-    res.redirect(`${FRONTEND_URL}/lobby.html?user=${encodeURIComponent(JSON.stringify({id: userRes.data.id, username: userRes.data.username, avatar: userRes.data.avatar}))}`);
+    const userData = { id: userRes.data.id, username: userRes.data.username, avatar: userRes.data.avatar };
+    res.redirect(`${FRONTEND_URL}/lobby.html?user=${encodeURIComponent(JSON.stringify(userData))}`);
   } catch (err) {
     console.error('Discord auth error:', err.message);
     res.redirect(FRONTEND_URL);
@@ -398,9 +456,16 @@ app.get('/api/stats', (req, res) => {
 
 app.get('/api/userinfo/:discordId', (req, res) => {
   const { discordId } = req.params;
-  for (const [socketId, player] of onlinePlayers.entries()) {
+  for (const [, player] of onlinePlayers.entries()) {
     if (player.user && player.user.id === discordId) {
       return res.json({ id: player.user.id, username: player.user.username, avatar: player.user.avatar });
+    }
+  }
+  for (const [, room] of Object.entries(rooms)) {
+    for (const p of room.players) {
+      if (p.user && p.user.id === discordId) {
+        return res.json({ id: p.user.id, username: p.user.username, avatar: p.user.avatar });
+      }
     }
   }
   res.json({ id: discordId, username: 'Player', avatar: null });
@@ -411,7 +476,7 @@ app.get('/api/profile/:discordId', (req, res) => {
   if (xpStore.has(discordId)) {
     res.json(xpStore.get(discordId));
   } else {
-    res.json({ xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, achievements: [] });
+    res.json({ xp: 0, level: 1, gamesPlayed: 0, wins: 0, bestScore: 0, timesDrawn: 0, achievements: [] });
   }
 });
 
@@ -421,7 +486,7 @@ app.get('/api/leaderboard', (req, res) => {
     entries.push({ discordId: id, ...data });
   }
   entries.sort((a, b) => b.xp - a.xp);
-  res.json(entries.slice(0, 10));
+  res.json(entries.slice(0, 100));
 });
 
 app.get('/api/public-rooms', (req, res) => {
@@ -429,15 +494,21 @@ app.get('/api/public-rooms', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  const session = socket.request.session;
+  const sess = socket.request.session;
   let user = null;
-  if (session && session.user) {
-    user = session.user;
+  if (sess && sess.user) {
+    user = sess.user;
   }
   if (!user && socket.handshake.auth && socket.handshake.auth.token) {
     const tokenUser = tokenMap.get(socket.handshake.auth.token);
     if (tokenUser) {
       user = tokenUser;
+    }
+  }
+  if (!user && socket.handshake.auth && socket.handshake.auth.user) {
+    const authUser = socket.handshake.auth.user;
+    if (authUser && authUser.id) {
+      user = { id: authUser.id, username: authUser.username || 'Player', avatar: authUser.avatar || null };
     }
   }
 
@@ -448,8 +519,10 @@ io.on('connection', (socket) => {
 
   socket.on('player-online', (userData) => {
     if (userData && userData.id) {
-      onlinePlayers.set(socket.id, { socketId: socket.id, user: userData });
+      user = { id: userData.id, username: userData.username || 'Player', avatar: userData.avatar || null };
+      onlinePlayers.set(socket.id, { socketId: socket.id, user });
       io.emit('online-players', Array.from(onlinePlayers.values()));
+      io.emit('online-count', onlinePlayers.size);
     }
   });
 
@@ -461,7 +534,14 @@ io.on('connection', (socket) => {
     const list = {};
     for (const [code, room] of Object.entries(rooms)) {
       if (room.status === 'lobby') {
-        list[code] = { code, name: room.name, players: room.players.map(p => ({ socketId: p.socketId, user: p.user })), maxPlayers: room.maxPlayers, status: room.status };
+        list[code] = {
+          code,
+          name: room.name,
+          players: room.players.map(p => ({ socketId: p.socketId, user: p.user })),
+          maxPlayers: room.maxPlayers,
+          playerCount: room.players.length,
+          status: room.status
+        };
       }
     }
     socket.emit('room-list-update', list);
@@ -479,7 +559,7 @@ io.on('connection', (socket) => {
       currentDrawerIndex: 0,
       currentWord: null,
       round: 1,
-      maxPlayers: data.maxPlayers || 16,
+      maxPlayers: Math.min(data.maxPlayers || 16, 16),
       maxRounds: data.rounds || 5,
       drawTime: data.drawTime || 60,
       language: data.language || 'en',
@@ -490,7 +570,8 @@ io.on('connection', (socket) => {
       wordHint: null,
       timerInterval: null,
       wordChoiceTimeout: null,
-      roundStartTime: null
+      roundStartTime: null,
+      autoStartInterval: null
     };
     rooms[code].scores[socket.id] = 0;
     socket.join(code);
@@ -519,7 +600,9 @@ io.on('connection', (socket) => {
         delete room.scores[oldId];
       }
       room.players[existingIdx].socketId = socket.id;
+      room.players[existingIdx].user = user || room.players[existingIdx].user;
       if (room.host === oldId) room.host = socket.id;
+      if (room.currentDrawer === oldId) room.currentDrawer = socket.id;
       isRejoin = true;
     } else {
       room.players.push({ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } });
@@ -528,43 +611,41 @@ io.on('connection', (socket) => {
     socket.join(code);
     socket.roomCode = code;
 
+    const playerState = getPlayerState(room);
+
     if (isRejoin) {
-      io.to(code).emit('player-joined', { players: room.players });
+      io.to(code).emit('player-joined', { players: playerState });
     } else {
-      io.to(code).emit('player-joined', { players: room.players });
+      io.to(code).emit('player-joined', { players: playerState });
       io.to(code).emit('chat-message', {
         type: 'system',
-        text: `👋 ${user?.username || 'Player'} joined`
+        text: `${user?.username || 'Player'} joined`
       });
     }
     io.emit('public-rooms', getPublicRoomsList());
 
-    // Auto start countdown when 2+ players join and game not started
-    if (!isRejoin && room.players.length >= 2 && room.status === 'lobby' && !room.autoStartInterval) {
-      setTimeout(() => {
-        if (room && room.status === 'lobby' && room.players.length >= 2 && !room.autoStartInterval) {
-          let count = 5
-          const countdownInterval = setInterval(() => {
-            io.to(room.code).emit('auto-start-countdown', { count })
-            count--
-            if (count < 0) {
-              clearInterval(countdownInterval)
-              if (room && room.status === 'lobby' && room.players.length >= 2) {
-                room.status = 'playing'
-                room.currentDrawerIndex = 0
-                room.round = 1
-                io.to(room.code).emit('game-starting', { players: room.players })
-                io.emit('public-rooms', getPublicRoomsList())
-                setTimeout(() => startRound(room), 2000)
-              }
-            }
-          }, 1000)
-          room.autoStartInterval = countdownInterval
-        }
-      }, 2000)
+    if (!isRejoin && room.players.length >= 2 && room.status === 'lobby') {
+      startAutoCountdown(room);
     }
 
-    callback({ success: true, code, room: { code: room.code, host: room.host, players: room.players, status: room.status, maxRounds: room.maxRounds, drawTime: room.drawTime, language: room.language, round: room.round } });
+    callback({
+      success: true,
+      code,
+      room: {
+        code: room.code,
+        name: room.name,
+        host: room.host,
+        players: playerState,
+        status: room.status,
+        maxRounds: room.maxRounds,
+        drawTime: room.drawTime,
+        language: room.language,
+        round: room.round,
+        maxPlayers: room.maxPlayers,
+        currentDrawer: room.currentDrawer,
+        scores: room.scores
+      }
+    });
   });
 
   socket.on('rejoin-room', (data, callback) => {
@@ -579,6 +660,7 @@ io.on('connection', (socket) => {
         delete room.scores[oldId];
       }
       existingPlayer.socketId = socket.id;
+      existingPlayer.user = user || existingPlayer.user;
       if (room.host === oldId) room.host = socket.id;
       if (room.currentDrawer === oldId) room.currentDrawer = socket.id;
     } else {
@@ -588,13 +670,36 @@ io.on('connection', (socket) => {
     }
     socket.join(code);
     socket.roomCode = code;
-    io.to(code).emit('player-joined', { players: room.players });
-    callback({ success: true, code, room: { code: room.code, host: room.host, players: room.players, status: room.status, maxRounds: room.maxRounds, drawTime: room.drawTime, language: room.language, round: room.round } });
+
+    const playerState = getPlayerState(room);
+    io.to(code).emit('player-joined', { players: playerState });
+
+    callback({
+      success: true,
+      code,
+      room: {
+        code: room.code,
+        name: room.name,
+        host: room.host,
+        players: playerState,
+        status: room.status,
+        maxRounds: room.maxRounds,
+        drawTime: room.drawTime,
+        language: room.language,
+        round: room.round,
+        maxPlayers: room.maxPlayers,
+        currentDrawer: room.currentDrawer,
+        scores: room.scores,
+        currentWord: room.currentWord,
+        wordHint: room.wordHint ? room.wordHint.join(' ') : null
+      }
+    });
   });
 
   socket.on('start-game', () => {
     const room = getRoom(socket);
     if (!room || room.host !== socket.id) return;
+    cancelAutoCountdown(room);
     room.status = 'playing';
     room.currentDrawerIndex = 0;
     room.round = 1;
@@ -645,6 +750,7 @@ io.on('connection', (socket) => {
       io.to(room.code).emit('correct-guess', {
         socketId: socket.id,
         username: user?.username || 'Player',
+        avatar: user?.avatar,
         score: room.scores[socket.id],
         points,
         drawerScore: room.scores[room.currentDrawer],
@@ -659,6 +765,7 @@ io.on('connection', (socket) => {
         type: 'guess',
         socketId: socket.id,
         username: user?.username || 'Player',
+        avatar: user?.avatar,
         text: guess
       });
     }
@@ -704,8 +811,13 @@ io.on('connection', (socket) => {
     clearInterval(room.timerInterval);
     clearTimeout(room.wordChoiceTimeout);
     clearTimeout(room.roundFailsafeTimeout);
+    cancelAutoCountdown(room);
     io.to(room.code).emit('game-restarted', { players: room.players, host: room.host });
     io.emit('public-rooms', getPublicRoomsList());
+
+    if (room.players.length >= 2) {
+      startAutoCountdown(room);
+    }
   });
 
   socket.on('disconnect', () => {
@@ -722,17 +834,15 @@ io.on('connection', (socket) => {
     if (idx === -1) return;
     room.players.splice(idx, 1);
 
-    // Cancel auto-start if player leaves and < 2 players
     if (room.autoStartInterval && room.players.length < 2) {
-      clearInterval(room.autoStartInterval)
-      room.autoStartInterval = null
-      io.to(roomCode).emit('auto-start-cancelled')
+      cancelAutoCountdown(room);
     }
 
     if (room.players.length === 0) {
       clearInterval(room.timerInterval);
       clearTimeout(room.wordChoiceTimeout);
       clearTimeout(room.roundFailsafeTimeout);
+      cancelAutoCountdown(room);
       room.pendingDelete = setTimeout(() => {
         delete rooms[roomCode];
         io.emit('public-rooms', getPublicRoomsList());
@@ -744,7 +854,7 @@ io.on('connection', (socket) => {
       if (room.host === socket.id) {
         room.host = room.players[0].socketId;
       }
-      io.to(roomCode).emit('player-left', { players: room.players, newHost: room.host });
+      io.to(roomCode).emit('player-left', { players: getPlayerState(room), newHost: room.host });
       io.emit('public-rooms', getPublicRoomsList());
       return;
     }
@@ -755,7 +865,7 @@ io.on('connection', (socket) => {
       clearTimeout(room.roundFailsafeTimeout);
       io.to(roomCode).emit('chat-message', {
         type: 'system',
-        text: '⏭ Round skipped - drawer disconnected'
+        text: 'Round skipped - drawer disconnected'
       });
       room.round++;
       room.currentDrawerIndex++;
@@ -764,14 +874,10 @@ io.on('connection', (socket) => {
       room.guessedCorrectly.delete(socket.id);
     }
 
-    io.to(roomCode).emit('player-left', { players: room.players, newHost: room.host });
+    io.to(roomCode).emit('player-left', { players: getPlayerState(room), newHost: room.host });
     io.emit('public-rooms', getPublicRoomsList());
   });
 });
-
-function getRoom(socket) {
-  return rooms[socket.roomCode];
-}
 
 server.listen(PORT, () => {
   console.log(`GalaxyDraw server running on port ${PORT}`);
