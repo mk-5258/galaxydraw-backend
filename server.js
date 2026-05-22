@@ -47,39 +47,59 @@ const io = new Server(server, {
 io.engine.use(sessionMiddleware);
 
 const ENGLISH_WORDS = [
-  'apple', 'banana', 'orange', 'grape', 'watermelon', 'strawberry', 'pineapple', 'mango',
-  'elephant', 'giraffe', 'dolphin', 'penguin', 'butterfly', 'turtle', 'rabbit', 'horse',
-  'sunflower', 'rose', 'tulip', 'daisy', 'tree', 'mountain', 'river', 'ocean', 'island',
-  'rainbow', 'star', 'moon', 'sun', 'cloud', 'rain', 'snow', 'thunder', 'castle',
-  'bridge', 'house', 'school', 'church', 'hospital', 'airplane', 'rocket', 'bicycle',
-  'piano', 'guitar', 'violin', 'drums', 'camera', 'pencil', 'book', 'clock', 'key',
-  'heart', 'crown', 'sword', 'shield', 'diamond', 'ring', 'flower', 'garden', 'forest',
-  'desert', 'waterfall', 'volcano', 'cave', 'lighthouse', 'anchor', 'sailboat', 'treasure',
-  'dragon', 'unicorn', 'mermaid', 'wizard', 'robot', 'ghost', 'skeleton', 'pumpkin',
-  'birthday', 'balloon', 'fireworks', 'ladder', 'umbrella', 'chair', 'table', 'window',
-  'football', 'basketball', 'tennis', 'baseball', 'swimming', 'running', 'jumping', 'flying',
-  'pizza', 'hamburger', 'fries', 'cake', 'cookie', 'icecream', 'chocolate', 'popcorn',
-  'coffee', 'tea', 'juice', 'milk', 'sandwich', 'salad', 'soup', 'bread', 'cheese',
-  'egg', 'chicken', 'fish', 'shrimp', 'crab', 'lobster', 'cat', 'dog', 'bird', 'mouse',
-  'lion', 'tiger', 'bear', 'wolf', 'fox', 'deer', 'owl', 'eagle', 'shark', 'whale',
-  'planet', 'comet', 'meteor', 'satellite', 'telescope', 'astronaut', 'spaceship',
-  'nebula', 'galaxy', 'constellation', 'eclipse', 'orbit', 'gravity', 'laser', 'portal',
-  'puzzle', 'maze', 'labyrinth', 'parachute', 'kite', 'compass', 'torch', 'candle',
-  'mirror', 'cushion', 'curtain', 'carpet', 'pillow', 'blanket', 'soap', 'towel',
-  'backpack', 'wallet', 'sunglasses', 'watch', 'necklace', 'bracelet', 'earrings',
-  'lollipop', 'mushroom', 'cactus', 'bamboo', 'coconut', 'cherry', 'lemon', 'peach'
-];
+  // Animals
+  'cat','dog','elephant','giraffe','dolphin','penguin','butterfly','turtle',
+  'rabbit','horse','lion','tiger','bear','wolf','fox','deer','owl','eagle',
+  'shark','whale','monkey','gorilla','zebra','kangaroo','crocodile','parrot',
+  'flamingo','octopus','jellyfish','seahorse','hamster','panda','koala',
+  // Food & Drink
+  'pizza','hamburger','hotdog','sandwich','sushi','taco','pasta','bread',
+  'cake','cookie','icecream','chocolate','popcorn','coffee','tea','juice',
+  'apple','banana','orange','grape','watermelon','strawberry','pineapple',
+  'mango','cherry','lemon','peach','mushroom','coconut','avocado','broccoli',
+  // Objects
+  'pencil','book','clock','key','camera','umbrella','backpack','wallet',
+  'sunglasses','watch','ring','crown','sword','shield','candle','mirror',
+  'cushion','carpet','pillow','blanket','soap','towel','compass','torch',
+  'ladder','chair','table','window','door','bridge','anchor','telescope',
+  // Nature
+  'mountain','river','ocean','island','rainbow','star','moon','sun','cloud',
+  'rain','snow','thunder','lightning','volcano','waterfall','cave','desert',
+  'forest','flower','tree','rose','sunflower','cactus','bamboo',
+  // Transportation
+  'airplane','rocket','bicycle','car','bus','train','boat','helicopter',
+  'motorcycle','submarine','skateboard','scooter','truck','ambulance',
+  // Sports & Activities
+  'football','basketball','tennis','baseball','swimming','running','jumping',
+  'skiing','surfing','boxing','archery','gymnastics','cycling','fishing',
+  // Music & Arts
+  'piano','guitar','violin','drums','microphone','headphones','painting',
+  'sculpture','ballet','theater','cinema',
+  // Buildings & Places
+  'castle','lighthouse','hospital','school','church','mosque','temple',
+  'pyramid','igloo','treehouse','windmill','skyscraper',
+  // Space
+  'planet','comet','meteor','satellite','astronaut','spaceship','nebula',
+  'galaxy','constellation','eclipse','blackhole','asteroid','rocket',
+  // Fantasy & Fun
+  'dragon','unicorn','mermaid','wizard','robot','ghost','pumpkin','pirate',
+  'ninja','viking','alien','superhero','fairy','vampire','werewolf',
+  // Everyday
+  'birthday','balloon','fireworks','rainbow','treasure','puzzle','maze',
+  'kite','parachute','lollipop','magnet','hourglass','compass']
 
 const MALAYALAM_WORDS = [
-  'വീട്', 'മരം', 'പൂച്ച', 'നായ', 'മീൻ', 'ആന', 'കാർ', 'പൂക്കൾ', 'മഴ', 'കടൽ',
-  'ചന്ദ്രൻ', 'സൂര്യൻ', 'പക്ഷി', 'പഴം', 'പുസ്തകം', 'വെള്ളം', 'അഗ്നി', 'ഭൂമി', 'ആകാശം', 'നക്ഷത്രം',
-  'കളിപ്പാട്ടം', 'പാലം', 'പറമ്പ്', 'കുന്ന്', 'പുഴ', 'കായൽ', 'വയൽ', 'തോട്', 'കിണർ', 'വഴി',
-  'പള്ളി', 'അമ്പലം', 'വിദ്യാലയം', 'ആശുപത്രി', 'കട', 'ചന്ത', 'പറക്കും', 'ഓട്ടം', 'ചിരി', 'കരച്ചിൽ',
-  'പാട്ട്', 'നൃത്തം', 'ചിത്രം', 'ശിൽപ്പം', 'കവിത', 'കഥ', 'നാടകം', 'സിനിമ', 'വാർത്ത', 'പത്രം',
-  'മിഠായി', 'അപ്പം', 'പായസം', 'കറി', 'ചോറ്', 'ഇഡ്ഡലി', 'ദോശ', 'പപ്പടം', 'തൈര്', 'മോര്',
-  'കമ്പ്യൂട്ടർ', 'ഫോൺ', 'ലാപ്ടോപ്പ്', 'ക്യാമറ', 'ടെലിവിഷൻ', 'റേഡിയോ', 'ഫാൻ', 'ലൈറ്റ്', 'ബാറ്ററി', 'കേബിൾ',
-  'പാമ്പ്', 'തവള', 'കുരങ്ങൻ', 'പശു', 'എരുമ', 'കുതിര', 'കഴുത', 'ആട്', 'കോഴി', 'താറാവ്'
-];
+  'വീട്', 'മരം', 'പൂച്ച', 'നായ', 'മീൻ', 'ആന', 'കാർ', 'പൂക്കൾ',
+  'മഴ', 'കടൽ', 'ചന്ദ്രൻ', 'സൂര്യൻ', 'പക്ഷി', 'പഴം', 'പുസ്തകം',
+  'വെള്ളം', 'അഗ്നി', 'ഭൂമി', 'ആകാശം', 'നക്ഷത്രം', 'കളിപ്പാട്ടം',
+  'പാലം', 'പറമ്പ്', 'കുന്ന്', 'പുഴ', 'കായൽ', 'വയൽ', 'കിണർ',
+  'പള്ളി', 'അമ്പലം', 'വിദ്യാലയം', 'ആശുപത്രി', 'ചന്ത', 'പാട്ട്',
+  'നൃത്തം', 'ചിത്രം', 'കഥ', 'സിനിമ', 'മിഠായി', 'അപ്പം', 'പായസം',
+  'കറി', 'ചോറ്', 'ഇഡ്ഡലി', 'ദോശ', 'കമ്പ്യൂട്ടർ', 'ഫോൺ', 'ടെലിവിഷൻ',
+  'പാമ്പ്', 'തവള', 'കുരങ്ങൻ', 'പശു', 'കുതിര', 'ആട്', 'കോഴി',
+  'മഞ്ഞ്', 'കാറ്റ്', 'തീ', 'കടൽത്തീരം', 'മേഘം', 'വെള്ളച്ചാട്ടം',
+  'പൂട്ട്', 'വീൽ', 'കത്തി', 'ചൂല്', 'കിടക്ക', 'കണ്ണാടി', 'മേശ',
+  'കസേര', 'വാതിൽ', 'ജനൽ', 'കൊടി', 'ചക്രം', 'കൊട്ട', 'വള']
 
 const rooms = {};
 const onlinePlayers = new Map();
@@ -459,7 +479,7 @@ io.on('connection', (socket) => {
       currentDrawerIndex: 0,
       currentWord: null,
       round: 1,
-      maxPlayers: data.maxPlayers || 8,
+      maxPlayers: data.maxPlayers || 16,
       maxRounds: data.rounds || 5,
       drawTime: data.drawTime || 60,
       language: data.language || 'en',
@@ -487,7 +507,7 @@ io.on('connection', (socket) => {
       clearTimeout(room.pendingDelete);
       delete room.pendingDelete;
     }
-    if (room.players.length >= (room.maxPlayers || 12)) return callback({ error: 'Room full' });
+    if (room.players.length >= (room.maxPlayers || 16)) return callback({ error: 'Room full' });
     if (room.status !== 'lobby') return callback({ error: 'Game already started' });
 
     let isRejoin = false;
@@ -519,6 +539,31 @@ io.on('connection', (socket) => {
     }
     io.emit('public-rooms', getPublicRoomsList());
 
+    // Auto start countdown when 2+ players join and game not started
+    if (!isRejoin && room.players.length >= 2 && room.status === 'lobby' && !room.autoStartInterval) {
+      setTimeout(() => {
+        if (room && room.status === 'lobby' && room.players.length >= 2 && !room.autoStartInterval) {
+          let count = 5
+          const countdownInterval = setInterval(() => {
+            io.to(room.code).emit('auto-start-countdown', { count })
+            count--
+            if (count < 0) {
+              clearInterval(countdownInterval)
+              if (room && room.status === 'lobby' && room.players.length >= 2) {
+                room.status = 'playing'
+                room.currentDrawerIndex = 0
+                room.round = 1
+                io.to(room.code).emit('game-starting', { players: room.players })
+                io.emit('public-rooms', getPublicRoomsList())
+                setTimeout(() => startRound(room), 2000)
+              }
+            }
+          }, 1000)
+          room.autoStartInterval = countdownInterval
+        }
+      }, 2000)
+    }
+
     callback({ success: true, code, room: { code: room.code, host: room.host, players: room.players, status: room.status, maxRounds: room.maxRounds, drawTime: room.drawTime, language: room.language, round: room.round } });
   });
 
@@ -537,7 +582,7 @@ io.on('connection', (socket) => {
       if (room.host === oldId) room.host = socket.id;
       if (room.currentDrawer === oldId) room.currentDrawer = socket.id;
     } else {
-      if (room.players.length >= (room.maxPlayers || 12)) return callback({ error: 'Room full' });
+      if (room.players.length >= (room.maxPlayers || 16)) return callback({ error: 'Room full' });
       room.players.push({ socketId: socket.id, user: user || { id: socket.id, username: data.name || 'Player', avatar: null } });
       room.scores[socket.id] = 0;
     }
@@ -676,6 +721,13 @@ io.on('connection', (socket) => {
     const idx = room.players.findIndex(p => p.socketId === socket.id);
     if (idx === -1) return;
     room.players.splice(idx, 1);
+
+    // Cancel auto-start if player leaves and < 2 players
+    if (room.autoStartInterval && room.players.length < 2) {
+      clearInterval(room.autoStartInterval)
+      room.autoStartInterval = null
+      io.to(roomCode).emit('auto-start-cancelled')
+    }
 
     if (room.players.length === 0) {
       clearInterval(room.timerInterval);
